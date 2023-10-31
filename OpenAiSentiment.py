@@ -138,6 +138,8 @@ def obtener_sentimiento(texto):
                 tiempo = match.group(1)
                 print(f"Esperando {tiempo} segundos")
                 time.sleep(int(tiempo)+1)
+            else :
+                return obtener_sentimiento(texto)
 
 def procesar_csv(nombre_archivo):
     try:
@@ -162,9 +164,9 @@ def procesar_csv(nombre_archivo):
                 df.at[index, 'Concepto'] = sentimiento
                 print(f"Texto: {texto}\nSentimiento: {sentimiento}")
 
-        # Guarda el DataFrame actualizado en un nuevo archivo CSV o sobrescribe el original
-        df.to_csv(nombre_archivo, index=False)
-        df.to_excel(f"{nombre_archivo.split('.csv')[0]}" + '.xlsx', index=False)
+                # Guarda el DataFrame actualizado en un nuevo archivo CSV o sobrescribe el original
+                df.to_csv(nombre_archivo, index=False)
+                df.to_excel(f"{nombre_archivo.split('.csv')[0]}" + '.xlsx', index=False)
 
     except FileNotFoundError:
         print(f"El archivo '{nombre_archivo}' no se encontró.")
