@@ -5,7 +5,9 @@ import json
 import requests
 import time
 import re
+import emoji
 import pandas as pd
+# import spacy
 from dotenv import load_dotenv
 
 load_dotenv()  # take environment variables from .env.
@@ -98,13 +100,29 @@ def openaiInit():
             print(f"Esperando {tiempo} segundos")
             time.sleep(int(tiempo)+1)
 
+# nlp = spacy.load("es_core_news_sm")  # Carga el modelo en español (puedes utilizar otro idioma si es necesario)
+# Arroja un error, arreglar.
+# def coherente(texto):
+#     doc = nlp(texto)
+#     for sent in [doc.sents]:
+#         # Verifica si hay al menos una oración coherente en el texto
+#         if len(sent) >= 1:
+#             return True
+#     return False
+
 # Función para obtener el sentimiento de un texto
 def obtener_sentimiento(texto):
     try:
         global conversation_history  # Accede a la variable global conversation_history
 
+        # Para evitar que el uso de tokens llegue al máximo, se elimina el historial de conversación
+        if len(conversation_history) > 3:
+            conversation_history.pop()
+            conversation_history.pop()
+        
         # Agrega el mensaje del usuario al historial de conversación
         conversation_history.append({"role": "user", "content": texto})
+        
 
         # Llamada a la API de OpenAI para obtener la respuesta
         response = openai.ChatCompletion.create(
@@ -115,7 +133,6 @@ def obtener_sentimiento(texto):
         )
         
         # Extrae el texto de la respuesta del asistente
-        print(response['choices'][0]['message']['content'])
         respuesta_asistente = response['choices'][0]['message']['content'].lower()
 
         # Agrega la respuesta del asistente al historial de conversación
@@ -139,7 +156,8 @@ def obtener_sentimiento(texto):
                 print(f"Esperando {tiempo} segundos")
                 time.sleep(int(tiempo)+1)
             else :
-                return obtener_sentimiento(texto)
+                time.sleep(5)
+                return False
 
 def procesar_csv(nombre_archivo):
     try:
@@ -150,23 +168,30 @@ def procesar_csv(nombre_archivo):
         if 'Texto' not in df.columns:
             print("El archivo CSV no tiene una columna 'Texto'.")
             return
-
+        
         # Itera a través de cada fila del DataFrame
         for index, row in df.iterrows():
             texto = row['Texto']
+            # if not coherente(texto): return False
+            print(f"Fila {index}...")
             sentimiento = row['Concepto']
-            if sentimiento == 'False' or sentimiento is False or pd.isnull(sentimiento):
-                print(f"Procesando fila {index}...")
-                # Obtén el sentimiento del texto
-                sentimiento = obtener_sentimiento(texto)
+            print(f"Texto: {texto}\nSentimiento: {sentimiento}")
+            
+            # Si ya existe un sentimiento en la columna 'Concepto', no lo cambies
+            if (not (sentimiento == 'False' or sentimiento is False or pd.isnull(sentimiento))): continue
+            
+            # Si el texto es 'None' o es solo emojies, no lo proceses
+            if (texto == '"None"' or bool(re.search(r'\b\w+\b', texto))): continue
+            # Obtén el sentimiento del texto
+            sentimiento = obtener_sentimiento(texto)
+            print(f"Sentimiento asignado: {sentimiento}\n")
+            
+            # Agrega el sentimiento a la columna 'Concepto'
+            df.at[index, 'Concepto'] = sentimiento
 
-                # Agrega el sentimiento a la columna 'Concepto'
-                df.at[index, 'Concepto'] = sentimiento
-                print(f"Texto: {texto}\nSentimiento: {sentimiento}")
-
-                # Guarda el DataFrame actualizado en un nuevo archivo CSV o sobrescribe el original
-                df.to_csv(nombre_archivo, index=False)
-                df.to_excel(f"{nombre_archivo.split('.csv')[0]}" + '.xlsx', index=False)
+            # Guarda el DataFrame actualizado en un nuevo archivo CSV o sobrescribe el original
+            df.to_csv(nombre_archivo, index=False)
+            df.to_excel(f"{nombre_archivo.split('.csv')[0]}" + '.xlsx', index=False)
 
     except FileNotFoundError:
         print(f"El archivo '{nombre_archivo}' no se encontró.")
@@ -178,7 +203,7 @@ def procesar_csv(nombre_archivo):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Uso: python script.py archivo_json")
+        print("Uso: python script.py archivo_csv")
     else:
         input_file = sys.argv[1]
         openaiInit()
