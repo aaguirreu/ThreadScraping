@@ -1,25 +1,22 @@
 import pandas as pd
-import sys
 import json
 import os
-from datetime import datetime
+import sys
 
-# Función para obtener el concepto asociado (puedes personalizar esta función según tus necesidades)
+# Funciones para obtener concepto, género, grupo etáreo y escolaridad
 def obtener_concepto(texto):
-    # Aquí puedes implementar la lógica para obtener el concepto asociado
+    # Implementa la lógica para obtener el concepto
     return False
 
-# Función para obtener el género y grupo etáreo (puedes personalizar esta función según tus necesidades)
 def obtener_genero_grupo_etareo(username):
-    # Aquí puedes implementar la lógica para obtener el género y grupo etáreo
-    return False, False
+    # Implementa la lógica para obtener el género y grupo etáreo
+    return "N/A", "N/A"
 
-# Función para obtener escolaridad (puedes personalizar esta función según tus necesidades)
 def obtener_escolaridad(username):
-    # Aquí puedes implementar la lógica para obtener la escolaridad
-    return False
+    # Implementa la lógica para obtener la escolaridad
+    return "N/A"
 
-def main(input_file):
+def procesar_archivo_json(input_file):
     try:
         with open(input_file, 'r') as file:
             data = json.load(file)
@@ -30,8 +27,8 @@ def main(input_file):
         print(f"Error al cargar el archivo JSON: {e}")
         return
 
-    # Crear listas para los datos de salida
     output_data = []
+
     for item in data["threads"]:
         thread = item["thread"]
         replies = item["replies"]
@@ -39,9 +36,10 @@ def main(input_file):
         concepto = obtener_concepto(thread["text"])
         genero, grupo_etareo = obtener_genero_grupo_etareo(thread["username"])
         escolaridad = obtener_escolaridad(thread["username"])
+
         output_data.append({
             "Texto": thread["text"],
-            "Fecha": datetime.utcfromtimestamp(thread["published_on"]).strftime('%Y-%m-%d %H:%M:%S'),
+            "Fecha": pd.to_datetime(thread["published_on"], unit="s"),
             "Concepto": concepto,
             "Género": genero,
             "Grupo Etáreo": grupo_etareo,
@@ -49,13 +47,15 @@ def main(input_file):
             "Escolaridad": escolaridad,
             "Fuente": thread["url"]
         })
+
         for reply in replies:
             concepto = obtener_concepto(reply["text"])
             genero, grupo_etareo = obtener_genero_grupo_etareo(reply["username"])
             escolaridad = obtener_escolaridad(reply["username"])
+
             output_data.append({
                 "Texto": reply["text"],
-                "Fecha": datetime.utcfromtimestamp(reply["published_on"]).strftime('%Y-%m-%d %H:%M:%S'),
+                "Fecha": pd.to_datetime(reply["published_on"], unit="s"),
                 "Concepto": concepto,
                 "Género": genero,
                 "Grupo Etáreo": grupo_etareo,
@@ -63,18 +63,33 @@ def main(input_file):
                 "Escolaridad": escolaridad,
                 "Fuente": reply["url"]
             })
-    # Crear un DataFrame de Pandas
-    df = pd.DataFrame(data=output_data)
-    filename = os.path.splitext(os.path.basename(input_file))[0]
 
-    # Guardar en CSV
-    df.to_csv(filename + '.csv', index=False)
+    return pd.DataFrame(data=output_data)
+
+def main(path):
+    # Directorio actual
+    json_directory = os.path.abspath(path)
+
+    # Lista de archivos JSON en el directorio actual
+    json_files = [f for f in os.listdir(json_directory) if f.endswith('.json')]
+
+    # Crear un DataFrame vacío
+    combined_data = pd.DataFrame()
+
+    for json_file in json_files:
+        file_path = os.path.join(json_directory, json_file)
+        df = procesar_archivo_json(file_path)
+        combined_data = pd.concat([combined_data, df], ignore_index=True)
+
+    # Guardar en un archivo CSV
+    combined_data.to_csv('dataset.csv', index=False, encoding="utf-8")
     # Guardar en Excel
-    df.to_excel(filename + '.xlsx', index=False)
+    combined_data.to_excel('dataset.xlsx', index=False, encoding="utf-8")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Uso: python script.py archivo_json")
+        print("Uso: python script.py json_files_path")
     else:
-        input_file = sys.argv[1]
-        main(input_file)
+        path = sys.argv[1]
+        main(path)

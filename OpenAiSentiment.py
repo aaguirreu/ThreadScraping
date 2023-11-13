@@ -178,10 +178,10 @@ def procesar_csv(nombre_archivo):
             print(f"Texto: {texto}\nSentimiento: {sentimiento}")
             
             # Si ya existe un sentimiento en la columna 'Concepto', no lo cambies
-            if (not (sentimiento == 'False' or sentimiento is False or pd.isnull(sentimiento))): continue
+            if (not (sentimiento == 'FALSO' or sentimiento is False or pd.isnull(sentimiento))): continue
             
             # Si el texto es 'None' o es solo emojies, no lo proceses
-            if (texto == '"None"' or bool(re.search(r'\b\w+\b', texto))): continue
+            #if (texto == '"None"' or bool(re.search(r'\b\w+\b', texto))): continue
             # Obtén el sentimiento del texto
             sentimiento = obtener_sentimiento(texto)
             print(f"Sentimiento asignado: {sentimiento}\n")
